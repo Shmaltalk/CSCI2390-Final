@@ -1,0 +1,309 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Differential Privacy Example</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.2/css/bulma.min.css">
+</head>
+
+<body>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://d3js.org/d3.v5.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Function to create a Plotly chart
+    function createBasicBarChart(containerId, dataUrl, chartTitle) {
+      // Fetch data from the backend
+      fetch(dataUrl)
+        .then(response => response.json())
+        .then(data => {
+          const trace = {
+            x: data.result.map(item => (item.group !== null ? item.group : 'public' || 'e')),
+            y: data.result.map(item => item.count).map(count => (count !== null ? count : 0)),
+            type: 'bar',
+            marker: {
+              color: data.result.map((item, index) => index),
+              colorscale: 'Viridis',
+            },
+          };
+
+          // Sort the groupCounts in descending order and get the second largest value
+          const secondLargestValue = trace.y.slice().sort((a, b) => b - a)[1];
+
+
+          const layout = {
+            title: chartTitle,
+            xaxis: {
+              title: 'Groups',
+            },
+            yaxis: {
+              title: 'Count',
+              range: [0, secondLargestValue * 1.2],
+            },
+            plot_bgcolor: 'rgba(211, 211, 211, 0.5)',
+          };
+
+          Plotly.newPlot(containerId, [trace], layout);
+        })
+        .catch(error => console.error('Error fetching data:', error));
+    }
+
+    
+    // Define a shared color scale based on the hex values of emojis
+    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+    function createGroupedBarChart(containerId, dataUrl, chartTitle) {
+      // Fetch data from the backend
+      fetch(dataUrl)
+        .then(response => response.json())
+        .then(data => {
+          // Create a unique key for each combination of emoji and group
+          const groupedData = data.result.reduce((acc, item) => {
+            const emoji = item.mainEmoji;
+            const group = item.group === null ? 'public' : item.group || 'e';
+
+            const key = `${emoji}-${group}`;
+
+            if (!acc[key]) {
+              acc[key] = 0;
+            }
+
+            acc[key] += item.count;
+
+            return acc;
+          }, {});
+
+          // Extract unique emojis and groups
+          const emojis = Array.from(new Set(data.result.map(item => item.mainEmoji)));
+          const groups = Array.from(new Set(data.result.map(item => (item.group === null ? 'public' : item.group || 'e'))));
+
+          // Create traces for each emoji and group
+          const traces = emojis.map((emoji, emojiIndex) => ({
+            x: groups,
+            y: groups.map(group => groupedData[`${emoji}-${group}`] || 0),
+            type: 'bar',
+            name: emoji,
+            hoverinfo: 'y+name',
+            marker: {
+              color: colorScale(emoji), // Assigning consistent color based on emoji order
+            },
+          }));
+
+          const layout = {
+            title: chartTitle,
+            xaxis: {
+              title: 'Groups',
+            },
+            yaxis: {
+              title: 'Count',
+            },
+            plot_bgcolor: 'rgba(211, 211, 211, 0.5)',
+            barmode: 'group',
+          };
+
+          Plotly.newPlot(containerId, traces, layout);
+        })
+        .catch(error => console.error('Error fetching data:', error));
+    }
+
+    function createGroupedBarChartNoPublic(containerId, dataUrl, chartTitle) {
+      // Fetch data from the backend
+      fetch(dataUrl)
+        .then(response => response.json())
+        .then(data => {
+          // Filter out entries where the group is 'Public' or NULL
+          const filteredData = data.result.filter(item => item.group !== 'Public' && item.group !== null);
+
+
+          // Create a unique key for each combination of emoji and group
+          const groupedData = filteredData.reduce((acc, item) => {
+            const emoji = item.mainEmoji;
+            const group = item.group || 'e'; // Treat empty string as 'Empty'
+
+            const key = `${emoji}-${group}`;
+
+            if (!acc[key]) {
+              acc[key] = 0;
+            }
+
+            acc[key] += item.count;
+
+            return acc;
+          }, {});
+
+          // Extract unique emojis and groups
+          const emojis = Array.from(new Set(filteredData.map(item => item.mainEmoji)));
+          const groups = Array.from(new Set(filteredData.map(item => item.group || 'e')));
+
+          // Create traces for each emoji and group
+          const traces = emojis.map((emoji, emojiIndex) => ({
+            x: groups,
+            y: groups.map(group => groupedData[`${emoji}-${group}`] || 0),
+            type: 'bar',
+            name: emoji,
+            hoverinfo: 'y+name',
+            marker: {
+              color: colorScale(emoji), // Assigning consistent color based on emoji order
+            },
+          }));
+
+          const layout = {
+            title: chartTitle,
+            xaxis: {
+              title: 'Groups',
+            },
+            yaxis: {
+              title: 'Count',
+            },
+            plot_bgcolor: 'rgba(211, 211, 211, 0.5)',
+            barmode: 'group',
+          };
+
+          Plotly.newPlot(containerId, traces, layout);
+        })
+        .catch(error => console.error('Error fetching data:', error));
+    }
+
+    function createFrequencyHistogram(containerId, dataUrl, chartTitle) {
+      // Fetch data from the backend
+      fetch(dataUrl)
+        .then(response => response.json())
+        .then(data => {
+          // Extract counts from the data
+          const counts = data.result.map(item => item.count);
+
+          // Count the frequency of each unique count
+          const countFrequency = {};
+          counts.forEach(count => {
+            countFrequency[count] = (countFrequency[count] || 0) + 1;
+          });
+
+          // Prepare data for the chart
+          const chartData = [{
+            x: Object.keys(countFrequency).map(Number),
+            y: Object.values(countFrequency),
+            type: 'bar',
+            marker: {
+              color: 'blue',
+            },
+          }];
+
+          // Layout for the chart
+          const layout = {
+            title: chartTitle,
+            xaxis: {
+              title: 'Num Users',
+            },
+            yaxis: {
+              title: 'Frequency',
+            },
+          };
+
+          Plotly.newPlot(containerId, chartData, layout);
+        })
+        .catch(error => console.error('Error fetching data:', error));
+    }
+
+    // Function to load new data and create new graphs
+    function loadNoisedDataAndGraphs() {
+
+      // Create the first chart
+      createBasicBarChart('chart1DP', 'http://localhost:8000/2390/users_per_group?addNoise=true', 'Users per Group Noised Values');
+
+      // Create the second chart
+      createBasicBarChart('chart2DP', 'http://localhost:8000/2390/posts_per_group?addNoise=true', 'Posts Per Group Noised Values');
+
+      createGroupedBarChart('chart3DP', 'http://localhost:8000/2390/emojis_per_group?addNoise=true', 'Emoji Counts by Group Noised Values');
+      createGroupedBarChartNoPublic('chart4DP', 'http://localhost:8000/2390/emojis_per_group?addNoise=True', 'Emoji Counts by Group (no public group) Noised Values');
+      
+    }
+
+    // Event listener for the noisy data click
+    document.getElementById('loadDataButton').addEventListener('click', loadNoisedDataAndGraphs);
+
+    // Create the first chart
+    createBasicBarChart('chart1', 'http://localhost:8000/2390/users_per_group', 'Users per Group True Values');
+
+    // Create the second chart
+    createBasicBarChart('chart2', 'http://localhost:8000/2390/posts_per_group', 'Posts Per Group True Values');
+  
+    createGroupedBarChart('chart3', 'http://localhost:8000/2390/emojis_per_group', 'Emoji Counts by Group True Values');
+    createGroupedBarChartNoPublic('chart4', 'http://localhost:8000/2390/emojis_per_group', 'Emoji Counts by Group (no public group) True Values');
+    
+    createFrequencyHistogram('chart5', 'http://localhost:8000/2390/histogram', 'Frequency of Num Users in test_default Group');
+  });
+</script>
+
+<section class="section">
+  <div class="container">
+    <div class="columns">
+      <div class="column is-half">
+        <h1 class="title">Un-Noised Aggregates</h1>
+      </div>
+      <div class="column is-half">
+        <h1 class="title">Noised Aggregates</h1>
+        <button id="loadDataButton" class="button is-primary">Add That Noise!</button>
+      </div>
+    </div>
+    <div class="columns">
+      <div class="column is-half">
+        <div class="box">
+          <div id="chart1"></div>
+        </div>
+      </div>
+      <div class="column is-half">
+        <div class="box">
+          <div id="chart1DP"></div>
+        </div>
+      </div>
+    </div>
+    <div class="columns">
+      <div class="column is-half">
+        <div class="box">
+          <div id="chart2"></div>
+        </div>
+      </div>
+      <div class="column is-half">
+        <div class="box">
+          <div id="chart2DP"></div>
+        </div>
+      </div>
+    </div>
+    <div class="columns">
+      <div class="column is-half">
+        <div class="box">
+          <div id="chart3"></div>
+        </div>
+      </div>
+      <div class="column is-half">
+        <div class="box">
+          <div id="chart3DP"></div>
+        </div>
+      </div>
+    </div>
+    <div class="columns">
+      <div class="column is-half">
+        <div class="box">
+          <div id="chart4"></div>
+        </div>
+      </div>
+      <div class="column is-half">
+        <div class="box">
+          <div id="chart4DP"></div>
+        </div>
+      </div>
+    </div>
+    <div class="columns">
+      <div class="column is-half">
+        <div class="box">
+          <div id="chart5"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</body>
+</html>
