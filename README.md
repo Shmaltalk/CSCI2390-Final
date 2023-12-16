@@ -62,8 +62,8 @@ DB_SUPERUSERPW="<superuser_password>"
 
 -   IDs are assigned automatically by an increment function, so retrieving items with ID greater than n will fetch items created after the item with ID n.
 
--   If you get `error 1449`, go into `chime.sql` and make sure the definer under each view is set to `'youruser'@'yourhost'`.
--   
+-   If you get `error 1449`, go into `chimetest.sql` and make sure the definer under each view is set to `'youruser'@'yourhost'`.
+
 -   All timestamps are UTC
 
 ## Environment
