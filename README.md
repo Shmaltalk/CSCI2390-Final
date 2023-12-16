@@ -7,8 +7,8 @@
 *   After step 7 (run `brew services start mariadb` and `mysql_install_db`), you may need to run `sudo mariadb_secure_installation`. Follow instructions to set a root password.
 
 -   Access mariadb with `mariadb -u root -p`.
--   Create the chime database `CREATE DATABASE chime`
--   Exit mariadb, then import the structure `mysql -u root -p chime < chime.sql` (if sudo is required then something has gone wrong. reinstall.)
+-   Create the chime database `CREATE DATABASE chimetest`
+-   Exit mariadb, then import the structure `mysql -u root -p chimetest < testbackup.sql` (if sudo is required then something has gone wrong. reinstall.)
 -   Make sure that you have a superuser (`GRANT ALL PRIVILEGES ON *.* TO '<username>'@'localhost';`), set the credentials of this user to **DB_SUPERUSER** and **DB_SUPERUSERPW** in .env
 -   Also make sure that you have a normal user (do not grant privileges), set the credentials of this user to DB_USER and DB_USERPW in .env
 
