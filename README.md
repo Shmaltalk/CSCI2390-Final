@@ -1,7 +1,5 @@
 ## Setup Locally
 
-This is going to be your best option for regular development. It will continue to be the case until I have a process for setting up through Vagrant
-
 ### Database Setup
 
 -   Make sure you have a [mariadb build installed on your computer](https://mariadb.com/resources/blog/installing-mariadb-10-1-16-on-mac-os-x-with-homebrew/)
@@ -19,18 +17,23 @@ This is going to be your best option for regular development. It will continue t
 The chime server runs on node.js, to set up your dependencies, navigate into the directory and run: `npm install`
 to start the server, run: `npm start`
 
+### Frontend Setup
+
+Once the server is running at localhost:8000 (be sure SERVER_HOST and SERVER_PORT in the .env are set to localhost and 8000 respectively), simply open index.html in any browser.
+To display the noised data, click the "Noise that data!" button.
+
 ### Env Structure
 
-If you do not already have a .env in Chime/chime_server/ then create one `touch Chime/chime_server/.env`
+If you do not already have a .env in CSCI2390-Final/ then create one `touch CSCI2390-Final/.env`
 
 Insert the following structure into that file.
 
 ```
-SESSION_SECRET="<random_string>"
-SERVER_HOST="<server_host_ip>" (e.g. 127.0.0.1)
-SERVER_PORT="<server_port_number>" (e.g. 8000)
+SESSION_SECRET="<random_string>" (e.g. 1234)
+SERVER_HOST="127.0.0.1"
+SERVER_PORT="8000"
 DB_HOST="<database_host>" (e.g. 127.0.0.1)
-USAGE_PERIOD_EXPIRATION="<random_string>" (e.g. 5000)
+USAGE_PERIOD_EXPIRATION="<random_string>" (e.g. 5555)
 DB_NAME="<chime_database_name>"
 DB_USER="<chime_user_name>"
 DB_USERPW="<chime_user_password>"
@@ -40,49 +43,27 @@ DB_SUPERUSERPW="<superuser_password>"
 
 ## Endpoint Overview
 
-| endpoint                | method | body                                                                                                                                            | returns                                                                                                                                                                                                              |
-| ----------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| /user                   | post   | token (string)                                                                                                                                  | userID: internal userid                                                                                                                                                                                              |
+| endpoint                | method | body                                                                                                                                            | returns                                                                                                                                           |
+| ----------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| /2390                   | get    | null                                                                                                                                            | string                                                                                                                                            |
 |                         |        |                                                                                                                                                 |
-| /login                  | post   | token (string)                                                                                                                                  | userID: internal userid                                                                                                                                                                                              |
+| /2390/db                | get    | null                                                                                                                                            | result: (json) list of users                                                                                                                      |
 |                         |        |                                                                                                                                                 |
-| /usage_period           | post   | null                                                                                                                                            | usagePeriodID: usage_period id                                                                                                                                                                                       |
+| /2390/users_per_group   | get    | addNoise (bool)                                                                                                                                 | result: (json) count of users in each group (noised if addNoise = true)                                                                           |
 |                         |        |                                                                                                                                                 |
-| /usage_period/end       | post   | null                                                                                                                                            | null                                                                                                                                                                                                                 |
+| /2390/posts_per_group   | get    | addNoise (bool)                                                                                                                                 | result: (json) count of posts in each group (noised if addNoise = true)                                                                           |
 |                         |        |                                                                                                                                                 |
-| /post                   | post   | main_emoji (string)<br>story_emojis (string)                                                                                                    | post_id (int)                                                                                                                                                                                                        |
+| /2390/emojis_per_group  | get    | addNoise (bool)                                                                                                                                 | result: (json) count of each main emoji posted in each group (noised if addNoise = true)                                                          |
 |                         |        |                                                                                                                                                 |
-| /post/:post_id/reaction | post   | post_id (int) - id of post reacting on<br>react_emoji (string) - emoji reacting with<br>react_time (timestamp) - user local time                | react_id (int)                                                                                                                                                                                                       |
-|                         |        |                                                                                                                                                 |
-| /post/:post_id/reaction | delete | post_id(int) - id of post removing reaction<br>react_emoji (string) - emoji removing                                                            | null                                                                                                                                                                                                                 |
-|                         |        |                                                                                                                                                 |
-| /user/posts             | get    | null                                                                                                                                            | reverse chronological table of given user posts<br>[post id, time posted, main emoji, story emojis]                                                                                                                  |
-|                         |        |                                                                                                                                                 |
-| /user/:id               | get    | null                                                                                                                                            | [username, avatar]                                                                                                                                                                                                   |
-|                         |        |                                                                                                                                                 |
-| /posts                  | get    | num_posts (int) - max # of posts to return<br>last_post_id (int) - id of last post you have (lowest post_id) (-1 if fetching most recent posts) | reverse chronological list of [post id, poster username, poster id, poster avatar, post timestamp, main emoji,<br>story emojis, react type, count of react type on this post,<br>current user react (NULL if none)]) |
+| /2390/histogram         | get    | null                                                                                                                                            | result: (json) list of 50 instances of count of users in group `test_default`, all noised                                                         |
 
-## Testing
-
-Testing is done using mocha
-Run the test suite with `npm test`
-
-Errors are disabled temporarily by the testing suite, if you would like to see errors, disable this error muting in **tests.js**, which acts as a test manager.
-
-Make sure that **DB_SUPERUSER** and **DB_PASSWORD** are both set in your .env file according to the credentials of your root mariadb user.
 
 ## Notes
 
 -   IDs are assigned automatically by an increment function, so retrieving items with ID greater than n will fetch items created after the item with ID n.
 
 -   If you get `error 1449`, go into `chime.sql` and make sure the definer under each view is set to `'youruser'@'yourhost'`.
-
--   Two [middlewares](https://expressjs.com/en/guide/using-middleware.html) exist within the project
-
-    -   `authenticate.js` will throw an error if the user is not logged in.
-    -   `update_usage_period.js` will either update an existing usage period if it has not expired, or it will generate
-        a new usage period if the existing usage period has expired.
-
+-   
 -   All timestamps are UTC
 
 ## Environment
